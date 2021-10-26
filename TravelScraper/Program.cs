@@ -19,7 +19,7 @@ namespace TravelScraper
 
 
             HtmlDocument htmlDoc = new HtmlDocument();
-
+            //TODO: expose the url to the user as input
             string website = "terratraveller.net/";
             string url = "http://" + website;
             string urlResponse = URLRequest(url);
@@ -58,7 +58,7 @@ namespace TravelScraper
             //Directory.SetCurrentDirectory(path);
 
             WebClient x = new WebClient();
-
+            //TODO: add multi threading for download
             //x.DownloadFile(url,)
             int i = 0;
             foreach (var link in links)
