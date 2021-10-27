@@ -5,6 +5,8 @@ using System.Linq;
 using HtmlAgilityPack;
 using System.IO;
 using System.Threading;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace TravelScraper
 {
@@ -14,109 +16,183 @@ namespace TravelScraper
         {
             Program test = new Program();
 
-            List<string> links = new List<string>();
-            List<string> names = new List<string>();
+            
+            List<string> url = new List<string>();
+            List<string> websites = new List<string>();
 
+            
 
-            HtmlDocument htmlDoc = new HtmlDocument();
-            //TODO: expose the url to the user as input
-            string website = "terratraveller.net/";
-            string url = "http://" + website;
-            string urlResponse = URLRequest(url);
-
-            htmlDoc.LoadHtml(urlResponse);
-
-            //Find all A tags in the document for hyperlinks
-            var anchorNodes = htmlDoc.DocumentNode.SelectNodes("//a");
-
-            if (anchorNodes != null)
+            if (File.Exists("websites.txt"))
             {
-                Console.WriteLine(String.Format("We found {0} anchor tags on this page. Here is the text from those tags:", anchorNodes.Count));
-
-                foreach (var anchorNode in anchorNodes)
+                int counter = 0;
+                foreach (string line in System.IO.File.ReadLines("websites.txt"))
                 {
-
-                    if (!anchorNode.GetAttributeValue("href", "").Contains("http"))
+                    if (line.StartsWith("#"))
                     {
-                        links.Add(url + anchorNode.GetAttributeValue("href", ""));
-                        names.Add(anchorNode.GetAttributeValue("href", "").Split('.')[0]);
-                        //Console.WriteLine(anchorNode.GetAttributeValue("href", ""));
-                    }
-
-                }
-            }
-
-            //create folder structure for images
-
-            //create main folder on desktop named after the website to crawl
-            string folderName = website.Split('.')[0];
-            string path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), folderName);
-            Console.WriteLine("creating folder: " + path);
-            //path= System.IO.Path.Combine(path,"test");
-            test.CreateFolder(path);
-
-            //Directory.SetCurrentDirectory(path);
-
-            WebClient x = new WebClient();
-            //TODO: add multi threading for download
-            //x.DownloadFile(url,)
-            int i = 0;
-            foreach (var link in links)
-            {
-                Directory.SetCurrentDirectory(path);
-                Console.WriteLine(link);
-                string path1 = System.IO.Path.Combine(path, names[i]);
-                test.CreateFolder(path1);
-                Directory.SetCurrentDirectory(path1);
-
-                List<string> ImageList = new List<string>();
-                string source = x.DownloadString(link);
-                HtmlAgilityPack.HtmlDocument document = new HtmlAgilityPack.HtmlDocument();
-                document.LoadHtml(source);
-
-                var ImageURLs = document.DocumentNode.Descendants("img")
-                    .Select(e => e.GetAttributeValue("src", null))
-                    .Where(s => !String.IsNullOrEmpty(s));
-
-                foreach (var item in ImageURLs)
-                {
-                    if (item != null && !item.Contains("http") && !File.Exists(item.ToString().Split('/').Last()))
-                    {
-                        using (WebClient client = new WebClient())
-                        { 
-                            try
-                            {
-                            client.DownloadFileAsync(new Uri(url + item), item.ToString().Split('/').Last());
-                            }
-                            catch
-                            {
-                            //Console.WriteLine("didnt download");
-                            }
-                        }
-
+                        //commented lines will be skipped
                     }
                     else
                     {
-                        Console.WriteLine("File: " + item.ToString().Split('/').Last() + " already exists, skipping...");
-
+                        System.Console.WriteLine(line);
+                        websites.Add(line);
+                        counter++;
                     }
-                    Thread.Sleep(15);
-                }
-                i++;
 
+                    
+                }
+
+                System.Console.WriteLine("{0} Website(s) detected. Press any button to continue", counter);
+                // Suspend the screen.  
+                System.Console.ReadLine();
             }
 
+            else
+            {
+                //fallback to only terratraveller
+                using (FileStream fs = File.Create("websites.txt"))
+                {
+                    // Add some text to file
+                    Byte[] title1 = new UTF8Encoding(true).GetBytes("#add websites like this : google.com/\n#each use a new line for each website. The # at the start of a line makes it a comment\n");
+                    fs.Write(title1, 0, title1.Length);
+                    Byte[] title = new UTF8Encoding(true).GetBytes("terratraveller.net/\n");
+                    fs.Write(title, 0, title.Length);
+                }
+
+                System.Console.WriteLine("No website list detected. File: websites.txt missing! Press any button to contine scraping terratraveller as fallback or close the program");
+                System.Console.ReadLine();
+            }
+            //string[] websites = { "terratraveller.net/" };
+            foreach (var website in websites)
+            {
+                url.Add("http://" + website);
+            }
+
+
+            //string url = "http://" + website;
+            int websiteCounter = 0;
+
+            
+            foreach (var u in url)
+            {
+                HtmlDocument htmlDoc = new HtmlDocument();
+                List<string> links = new List<string>();
+                List<string> names = new List<string>();
+
+                string urlResponse = URLRequest(u);
+
+                htmlDoc.LoadHtml(urlResponse);
+
+                names.Add(websites[websiteCounter]);
+                //Find all A tags in the document for hyperlinks
+                var anchorNodes = htmlDoc.DocumentNode.SelectNodes("//a");
+
+                if (anchorNodes != null)
+                {
+                    Console.WriteLine(String.Format("\nWe found {0} anchor tags on this page. Here is the text from those tags:", anchorNodes.Count));
+
+                    foreach (var anchorNode in anchorNodes)
+                    {
+
+                        if (!anchorNode.GetAttributeValue("href", "").Contains("http")&& !links.Contains(u + anchorNode.GetAttributeValue("href", ""))&& !links.Contains(u + anchorNode.GetAttributeValue("href", "")) && !(u + anchorNode.GetAttributeValue("href", "")).Contains("mailto"))
+                        {
+                            links.Add(u + anchorNode.GetAttributeValue("href", ""));
+                            names.Add(anchorNode.GetAttributeValue("href", "").Split('.')[0]);
+                            //Console.WriteLine(anchorNode.GetAttributeValue("href", ""));
+                        }
+
+                    }
+                }
+                foreach (var l in links)
+                {
+                    Console.WriteLine(l);
+             
+                }
+                Console.WriteLine("\npress any button to continue...");
+                Console.ReadLine();
+
+                //create folder structure for images
+
+                //create main folder on desktop named after the website to crawl
+                string folderName = websites[websiteCounter].Split('.')[0];
+                string path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), folderName);
+                //Console.WriteLine("creating folder: " + websites[websiteCounter]);
+                                
+                test.CreateFolder(path);
+
+               WebClient x = new WebClient();
+                //TODO: add multi threading for download
+                int i = 0;
+                foreach (var link in links)
+                {
+                    Directory.SetCurrentDirectory(path);
+                    
+                    string path1 = System.IO.Path.Combine(path, names[i]);
+                    if (!path1.StartsWith("C"))
+                    {
+                        path1 = path + path1;
+                    }
+                    test.CreateFolder(path1);
+                    Directory.SetCurrentDirectory(path1);
+                    Console.WriteLine(path + " test path1 ");
+
+                    List<string> ImageList = new List<string>();
+                    Console.WriteLine(link);
+                    string source = x.DownloadString(link);
+                    HtmlAgilityPack.HtmlDocument document = new HtmlAgilityPack.HtmlDocument();
+                    document.LoadHtml(source);
+                    
+                    var ImageURLs = document.DocumentNode.Descendants("img")
+                        .Select(e => e.GetAttributeValue("src", null))
+                        .Where(s => !String.IsNullOrEmpty(s));
+
+                    foreach (var item in ImageURLs)
+                    {
+                        if (item != null && !item.Contains("http") && !File.Exists(item.ToString().Split('/').Last()))
+                        {
+                            using (WebClient client = new WebClient())
+                            {
+                                
+                                try
+                                {
+                                    client.DownloadFileAsync(new Uri(link.Replace(link.Split('/').Last(), "") + item), item.ToString().Split('/').Last());
+                                    //Console.WriteLine("downloading: "+ new Uri(link.Replace(link.Split('/').Last(),"")+item));
+                                }
+                                catch
+                                {
+                                    Console.WriteLine("didnt download; error with: "+ item);
+                                    
+                                }
+                            }
+
+                        }
+                        else
+                        {
+                            //Console.WriteLine(Directory.GetCurrentDirectory());
+                            Console.WriteLine("File: " + item.ToString().Split('/').Last() + " already exists, skipping...");
+
+                        }
+                        //Thread.Sleep(15);
+                    }
+                    i++;
+
+                }
+                websiteCounter++;
+            }
+
+            Console.WriteLine("\ndownload fisnished. Press anything to continue...");
+            System.Console.ReadLine();
         }
 
         public void CreateFolder(string path)
         {
+            
 
             try
             {
                 // Determine whether the directory exists.
                 if (Directory.Exists(path))
                 {
-                    Console.WriteLine("That path exists already.");
+                    //Console.WriteLine("That path exists already." + path);
                     return;
                 }
 
