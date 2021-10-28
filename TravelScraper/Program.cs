@@ -4,9 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 using System.IO;
-using System.Threading;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace TravelScraper
 {
@@ -61,22 +59,20 @@ namespace TravelScraper
                 System.Console.WriteLine("No website list detected. File: websites.txt missing! Press any button to contine scraping terratraveller as fallback or close the program");
                 System.Console.ReadLine();
             }
-            //string[] websites = { "terratraveller.net/" };
+           
             foreach (var website in websites)
             {
                 url.Add("http://" + website);
             }
 
-
-            //string url = "http://" + website;
             int websiteCounter = 0;
 
-            
             foreach (var u in url)
             {
                 HtmlDocument htmlDoc = new HtmlDocument();
                 List<string> links = new List<string>();
                 List<string> names = new List<string>();
+                List<string> downloaded = new List<string>();
 
                 string urlResponse = URLRequest(u);
 
@@ -92,20 +88,68 @@ namespace TravelScraper
 
                     foreach (var anchorNode in anchorNodes)
                     {
-
-                        if (!anchorNode.GetAttributeValue("href", "").Contains("http")&& !links.Contains(u + anchorNode.GetAttributeValue("href", ""))&& !links.Contains(u + anchorNode.GetAttributeValue("href", "")) && !(u + anchorNode.GetAttributeValue("href", "")).Contains("mailto"))
+                        //Console.WriteLine(anchorNode.GetAttributeValue("href", ""));
+                        if (!links.Contains(anchorNode.GetAttributeValue("href", "").Contains("http") ? anchorNode.GetAttributeValue("href", "") : u + anchorNode.GetAttributeValue("href", ""))&& !(u + anchorNode.GetAttributeValue("href", "")).Contains("mailto"))
                         {
-                            links.Add(u + anchorNode.GetAttributeValue("href", ""));
-                            names.Add(anchorNode.GetAttributeValue("href", "").Split('.')[0]);
-                            //Console.WriteLine(anchorNode.GetAttributeValue("href", ""));
+                            if (!anchorNode.GetAttributeValue("href", "").Contains("http")|| anchorNode.GetAttributeValue("href", "").Contains(websites[websiteCounter]))
+                            {
+
+                                links.Add(anchorNode.GetAttributeValue("href", "").Contains("http") ? anchorNode.GetAttributeValue("href", "") : u + anchorNode.GetAttributeValue("href", ""));
+                                names.Add(anchorNode.GetAttributeValue("href", "").Replace("http://","").Replace(".php",""));
+                                //Console.WriteLine(names.Last()+"-name added");
+                            }
+                            
                         }
 
                     }
                 }
+
+              
+
+                int page=0;
+                int pageMin = 0;
+                int pageMax = 0;
+                string start="";
                 foreach (var l in links)
                 {
-                    Console.WriteLine(l);
-             
+                    if (l.Contains("page"))
+                    {
+                       var words = l.Split('/');
+                       int.TryParse(words[words.Length-2],out page);
+                        //Console.WriteLine(page);
+
+                        if (page >0)
+                        {
+
+                            
+                            pageMin = page;
+
+                            if (pageMax < pageMin)
+                            {
+                                page = pageMax;
+                                pageMax = pageMin;
+                                pageMin = page;
+                                start = l;
+                                                           
+                            }
+                            
+                        }
+                        
+                       
+                    }
+                    //Console.WriteLine(l);
+
+
+                }
+
+                if (start.Length != 0)
+                {
+                    for (int k = pageMin+1; k < pageMax;k++)
+                    {
+                        links.Add(start.Replace(pageMax.ToString(), (k).ToString()));
+                        names.Add(start.Replace(pageMax.ToString(), (k).ToString()).Replace("http://",""));
+                        //Console.WriteLine(names.Last());
+                    }
                 }
                 Console.WriteLine("\npress any button to continue...");
                 Console.ReadLine();
@@ -133,7 +177,7 @@ namespace TravelScraper
                     }
                     test.CreateFolder(path1);
                     Directory.SetCurrentDirectory(path1);
-                    Console.WriteLine(path + " test path1 ");
+                    //Console.WriteLine(path);
 
                     List<string> ImageList = new List<string>();
                     Console.WriteLine(link);
@@ -147,15 +191,16 @@ namespace TravelScraper
 
                     foreach (var item in ImageURLs)
                     {
-                        if (item != null && !item.Contains("http") && !File.Exists(item.ToString().Split('/').Last()))
+                        if (item != null && !item.Contains("http") && !File.Exists(item.ToString().Split('/').Last())&&!downloaded.Contains(item.ToString().Split('/').Last()))
                         {
-                            using (WebClient client = new WebClient())
+                            
                             {
-                                
-                                try
+                                using (WebClient client = new WebClient())
+                                    try
                                 {
                                     client.DownloadFileAsync(new Uri(link.Replace(link.Split('/').Last(), "") + item), item.ToString().Split('/').Last());
-                                    //Console.WriteLine("downloading: "+ new Uri(link.Replace(link.Split('/').Last(),"")+item));
+                                        downloaded.Add(item.ToString().Split('/').Last());
+                                    Console.WriteLine("downloading: "+ new Uri(link.Replace(link.Split('/').Last(),"")+item));
                                 }
                                 catch
                                 {
@@ -167,9 +212,19 @@ namespace TravelScraper
                         }
                         else
                         {
+                            using (WebClient client = new WebClient())
+                                if (item.Contains("http") && !File.Exists(item.ToString().Split('/').Last())&& item!=null && !downloaded.Contains(item.ToString().Split('/').Last()))
+                            {
+                                Console.WriteLine("fallback http donwload: "+ item.ToString().Split('/').Last());
+                                client.DownloadFileAsync(new Uri(item), item.ToString().Split('/').Last());
+                                downloaded.Add(item.ToString().Split('/').Last());
+                                }
+                            else
+                                { 
+
                             //Console.WriteLine(Directory.GetCurrentDirectory());
                             Console.WriteLine("File: " + item.ToString().Split('/').Last() + " already exists, skipping...");
-
+                                }
                         }
                         //Thread.Sleep(15);
                     }
