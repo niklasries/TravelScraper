@@ -17,7 +17,6 @@ namespace TravelScraper
             
             List<string> url = new List<string>();
             List<string> websites = new List<string>();
-
             
 
             if (File.Exists("websites.txt"))
@@ -34,9 +33,7 @@ namespace TravelScraper
                         System.Console.WriteLine(line);
                         websites.Add(line);
                         counter++;
-                    }
-
-                    
+                    }                    
                 }
 
                 System.Console.WriteLine("{0} Website(s) detected. Press any button to continue", counter);
@@ -102,9 +99,7 @@ namespace TravelScraper
                         }
 
                     }
-                }
-
-              
+                }             
 
                 int page=0;
                 int pageMin = 0;
@@ -120,7 +115,6 @@ namespace TravelScraper
 
                         if (page >0)
                         {
-
                             
                             pageMin = page;
 
@@ -133,12 +127,10 @@ namespace TravelScraper
                                                            
                             }
                             
-                        }
-                        
+                        }                        
                        
                     }
                     //Console.WriteLine(l);
-
 
                 }
 
@@ -151,21 +143,21 @@ namespace TravelScraper
                         //Console.WriteLine(names.Last());
                     }
                 }
+
                 Console.WriteLine("\npress any button to continue...");
                 Console.ReadLine();
 
                 //create folder structure for images
-
                 //create main folder on desktop named after the website to crawl
                 string folderName = websites[websiteCounter].Split('.')[0];
                 string path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), folderName);
-                //Console.WriteLine("creating folder: " + websites[websiteCounter]);
-                                
+                //Console.WriteLine("creating folder: " + websites[websiteCounter]);                                
                 test.CreateFolder(path);
 
-               WebClient x = new WebClient();
+                WebClient x = new WebClient();
                 //TODO: add multi threading for download
                 int i = 0;
+
                 foreach (var link in links)
                 {
                     Directory.SetCurrentDirectory(path);
@@ -239,8 +231,7 @@ namespace TravelScraper
         }
 
         public void CreateFolder(string path)
-        {
-            
+        {         
 
             try
             {
@@ -264,7 +255,6 @@ namespace TravelScraper
 
             return;
         }
-
         //General Function to request data from a Server
         static string URLRequest(string url)
         {
